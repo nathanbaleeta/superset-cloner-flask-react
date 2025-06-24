@@ -29,6 +29,11 @@ export SUPERSET_USERNAME='admin'
 export SUPERSET_PASSWORD='admin'
 ```
 
+You can verify the ENV variables are set correctly by running
+```bash
+printenv
+```
+
 If you're going to test on staging, you'll need to change these three variables. Take note of the last / in the instance URL, as it's needed for the API endpoint concatenates to work properly.
 
 ### Launch backend
