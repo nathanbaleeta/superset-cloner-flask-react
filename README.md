@@ -12,6 +12,8 @@ The project uses [Pip]([https://python-poetry.org/](https://pypi.org/project/pip
 ```bash
 git clone git@github.com:nathanbaleeta/superset-cloner-flask-react.git
 
+cd superset-cloner-flask-react
+
 python3 -m venv venv
 
 source venv/bin/activate
