@@ -21,7 +21,7 @@ source venv/bin/activate
 pip install Flask requests flask_cors
 ```
 
-You'lll also need to set three environment variables before running the script: ```SUPERSET_INSTANCE_URL```, ```SUPERSET_USERNAME```, and ```SUPERSET_PASSWORD```. If any of these are not set, the scripts would fail to run. If you have a local Superset instance set up, sourcing the following .env file should work:
+You'lll also need to set three environment variables before running the script: ```SUPERSET_INSTANCE_URL```, ```SUPERSET_USERNAME```, and ```SUPERSET_PASSWORD```. If any of these are not set, the Flask backend will fail to run. 
 
 ```bash
 export SUPERSET_INSTANCE_URL='http://localhost:8088/'
