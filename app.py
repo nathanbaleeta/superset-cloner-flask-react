@@ -153,6 +153,9 @@ def copy_dashboard():
 @app.route('/api/v1/update_chart_datasource', methods=['POST'])
 def update_chart_datasource():
     data = request.get_json() # Get JSON data from the request body
+    print("#" * 50)
+    print(data)
+    print("#" * 50)
 
     new_dashboard_id = data.get('newDashboardId')
     old_dataset_id = data.get('oldDatasetId')
@@ -164,45 +167,40 @@ def update_chart_datasource():
 def update_charts():
     DATASET_ID = 141
     data = request.get_json() # Get JSON data from the request body
-    print(data)
+  
 
     request_handler = APIRequestHandler(SUPERSET_INSTANCE_URL, SUPERSET_USERNAME, SUPERSET_PASSWORD)
-    # {'slice_name': 'Employee Counter List sa', 'datasource_id': 141, 'description': 'Cloned', 'params': '{"datasource": "141__table"}'}
-      
+    # {'slice_name': 'Employee Counter List sa', 'datasource_id': 141, 'description': 'Cloned', 'params': '{"datasource": "141__table"}'}       
+
+    chart_data = []
     for item in data:
-        #payload = dict()
-        payload = {}
         if item['destinationChart']:
             slice_id = item['slice_id']
-            payload['slice_name'] = item['destinationChart']
-            payload['datasource_id'] = DATASET_ID
-            payload['datasource_type'] = "table"
-            payload['params'] = json.dumps({ 
-                "datasource": f"{DATASET_ID}__table" 
-                }),
-            payload['description'] = "Cloned"
-            print(payload)
-            response = request_handler.put_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False, json=payload) 
-            print(response.status_code)
 
+            chart_response = request_handler.get_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False)
+            chart_params_json = chart_response.json().get("result", {}).get("params")
+    
+            # Update the metadata with positions - it needs to be a dict
+            params_dict = json.loads(chart_params_json)
             
+            """ "params": json.dumps({
+                    "viz_type": viz_type_from_params,
+                   "datasource": f"{DATASET_ID}__table"
+                }), """
 
-    """ for item in data:
-        if item['destinationChart']:
-            slice_id = item['slice_id']
+
             chart_data = {
-                "slice_name":  item['destinationChart'],
-                #"viz_type": "big_number_total",
-                #"datasource_id": DATASET_ID,
-                #"datasource_type": "table",
-                "params": json.dumps({
-                    #"viz_type": "big_number_total",
-                    #"metric": "count",
-                    "datasource": f"{DATASET_ID}__table"
-                }),
-                "description": "Cloned"
+                "slice_name":  item['destinationChart'], 
+                "datasource_id": DATASET_ID,
+                "datasource_type": "table",
+                "params": json.dumps(params_dict),
+                "description": "Updated by script!"
             }
-            request_handler.put_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False, json=chart_data) """
+            print("*" * 50)
+            print(chart_data)
+            print("*" * 50)
+
+            request_handler.put_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False, json=chart_data)
 
     return data
 
