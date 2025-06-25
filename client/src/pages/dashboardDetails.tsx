@@ -39,64 +39,39 @@ function DashboardDetails() {
   const [editRowId, setEditRowId] = useState(null);
   const [editedData, setEditedData] = useState({}); // Stores changes for the currently edited row
 
-  const handleEditClick = (rowId: any) => {
-    setEditRowId(rowId);
-
-    // Initialize editedData with the current row's data
-    setEditedData(sliceConfigMap.find((item) => item.slice_id === rowId));
-  };
-
-  const handleSaveClick = (rowId) => {
-    setSliceConfigMap((prevSliceConfigMap) =>
-      prevSliceConfigMap.map((item) =>
-        item.slice_id === rowId ? { ...item, ...editedData } : item
-      )
-    );
-
-    setEditRowId(null); // Exit edit mode
-    setEditedData({}); // Clear edited data
-
-    onUpdateChart();
-  };
-
-  const handleCancelClick = () => {
-    setEditRowId(null); // Exit edit mode
-    setEditedData({}); // Clear edited data
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEditedData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const onDatasourceChange = async (slice_id: any, newDatasourceValue: any, oldDatasourceValue: any) => {
-    const foundDatasource: any = datasetList.find(item => item.dataset === newDatasourceValue);
-    const newDatasetId: number = foundDatasource.dataset_id
-    const oldDatasetId: number = oldDatasourceValue
-
-    const payload = {
-      newDashboardId: newDashboardId,
-      oldDatasetId: oldDatasetId,
-      newDatasetId: newDatasetId,
-    };
-
-    const UPDATE_CHART_DATASOURCE_ENDPOINT = `http://localhost:5000/api/v1/update_chart_datasource`;
-
-    const response = await fetch(UPDATE_CHART_DATASOURCE_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+    const getDatasets = async () => {
+  
+  const datasetGetResponse = await fetch(DATASET_API_ENDPOINT, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+  const datasetData = await datasetGetResponse.json();
+  let datasetListing: any = [];
+    datasetData.forEach(function (item: any) {
+      let newObject: any = {
+        dataset_id: item.id,
+        dataset: item.table_name,
+        datasource_type: item.datasource_type,
+        modified: item.changed_on_delta_humanized,
+        database_id: item.database.id,
+        database_name: item.database.database_name,
+        schema: item.schema,
+        explore_url: item.explore_url
+      };
+      datasetListing.push(newObject);
     });
 
-    // Parse the JSON response
-    //const data = await response.json();
+  if (!datasetListing) {
+    console.warn("Dataset listing missing from response. Check if the Superset API has been changed.");   
+  }
+  setDatasetList(datasetListing)
 
-    
-  };
+return datasetGetResponse;
+}
 
-  const onCloneDashboard = async (
+const onCloneDashboard = async (
     dashboardId: number,
     newDashboardTitle: string
   ) => {
@@ -143,7 +118,6 @@ function DashboardDetails() {
       sliceInfoData.some(item2 => item1.dataset_id === Number(item2.dataset))
     );
 
-
     const updatedSliceInfoData = sliceInfoData.map(slice => ({
       ...slice, // Copy all existing properties
       dataset_name: matchingEntriesFilter[0].dataset || "Unknown dataset" 
@@ -153,41 +127,47 @@ function DashboardDetails() {
     setSliceConfigMap(updatedSliceInfoData);
   };
 
+   const onDatasourceChange = async (rowId: any, newDatasourceValue: any, oldDatasourceValue: any) => {
+    const foundDatasource: any = datasetList.find(item => item.dataset === newDatasourceValue);
+    const newDatasetId: number = foundDatasource.dataset_id
+    const newDatasetName: number = foundDatasource.dataset
+    const oldDatasetId: number = oldDatasourceValue
 
-  const getDatasets = async () => {
-  
-  const datasetGetResponse = await fetch(DATASET_API_ENDPOINT, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json'
-    }
-  })
-  const datasetData = await datasetGetResponse.json();
-  let datasetListing: any = [];
-    datasetData.forEach(function (item: any) {
-      let newObject: any = {
-        dataset_id: item.id,
-        dataset: item.table_name,
-        datasource_type: item.datasource_type,
-        modified: item.changed_on_delta_humanized,
-        database_id: item.database.id,
-        database_name: item.database.database_name,
-        schema: item.schema,
-        explore_url: item.explore_url
-      };
-      datasetListing.push(newObject);
+    console.info(foundDatasource)
+
+    setSliceConfigMap(prevSliceConfigMap => {
+      return prevSliceConfigMap.map(item => {
+        if (item.slice_id === rowId) {
+          return { ...item, dataset: newDatasetId, dataset_name: newDatasetName};
+        }
+        return item;
+      });
     });
-  //console.info(datasetListing)
 
-  if (!datasetListing) {
-    console.warn("Dataset listing missing from response. Check if the Superset API has been changed.");   
-  }
-  setDatasetList(datasetListing)
+    const payload = {
+      sliceId: rowId,
+      newDashboardId: newDashboardId,
+      oldDatasetId: oldDatasetId,
+      newDatasetId: newDatasetId,
+      newDatasetName: newDatasetName
+    };
 
-return datasetGetResponse;
-}
+    const UPDATE_CHART_DATASOURCE_ENDPOINT = `http://localhost:5000/api/v1/update_chart_datasource`;
 
-const onUpdateChart = async () => {
+    const response = await fetch(UPDATE_CHART_DATASOURCE_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // Parse the JSON response
+    //const data = await response.json();
+
+  };
+
+   const onUpdateChart = async () => {
 
     const UPDATE_CHART_DETAILS_ENDPOINT = `http://localhost:5000/api/v1/update_charts`;
     const payload = sliceConfigMap;
@@ -203,6 +183,40 @@ const onUpdateChart = async () => {
     // Parse the JSON response
     const data = await response.json();
     //console.info(data)
+    
+  };
+
+  const handleEditClick = (rowId: any) => {
+
+    setEditRowId(rowId);
+
+    // Initialize editedData with the current row's data
+    setEditedData(sliceConfigMap.find((item) => item.slice_id === rowId));
+  };
+
+  const handleSaveClick = (rowId) => {
+    setSliceConfigMap((prevSliceConfigMap) =>
+      prevSliceConfigMap.map((item) =>
+        item.slice_id === rowId ? { ...item, ...editedData } : item
+      )
+    );
+
+    onUpdateChart();
+
+    setEditRowId(null); // Exit edit mode
+    setEditedData({}); // Clear edited data
+
+    
+  };
+
+  const handleCancelClick = () => {
+    setEditRowId(null); // Exit edit mode
+    setEditedData({}); // Clear edited data
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditedData((prev) => ({ ...prev, [name]: value }));
   };
 
   const arrayDatasetItems = datasetList?.map(({dataset_id, dataset}: any) => 
@@ -213,7 +227,7 @@ const onUpdateChart = async () => {
     getDatasets();
     onUpdateChart();
     
-  }, [DATASET_API_ENDPOINT, sliceConfigMap]);
+  }, [DATASET_API_ENDPOINT, sliceConfigMap, editRowId]);
 
   return (
     <Fragment>
