@@ -145,32 +145,61 @@ def copy_dashboard():
 
     copy_response_output = copy_response.json()
 
-    # sample copy_response_output - {'result': {'id': 1803, 'last_modified_time': 1748530693.0}}
-
     get_dashboards()
     return copy_response_output
 
 @app.route('/api/v1/update_chart_datasource', methods=['POST'])
 def update_chart_datasource():
     data = request.get_json() # Get JSON data from the request body
-    print("#" * 50)
-    print(data)
-    print("#" * 50)
+    #print("#" * 50)
+    #print(data)
+    #print("#" * 50)
 
     new_dashboard_id = data.get('newDashboardId')
     old_dataset_id = data.get('oldDatasetId')
     new_dataset_id = data.get('newDatasetId')
+    slice_id = data.get('sliceId')
+
+    request_handler = APIRequestHandler(SUPERSET_INSTANCE_URL, SUPERSET_USERNAME, SUPERSET_PASSWORD)
+    chart_response = request_handler.get_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False)
+    slice_name_from_json = chart_response.json().get("result", {}).get("slice_name")
+    chart_params_json = chart_response.json().get("result", {}).get("params")
+ 
+    # parses the JSON string 'chart_params_json' into a Python dictionary - deserialization
+    params_dict = json.loads(chart_params_json)
+
+    if 'datasource' in params_dict:
+        new_datasource_value = f"{new_dataset_id}__table"
+        params_dict['datasource'] = new_datasource_value
+        print(f"Updated 'datasource' to: {new_datasource_value}")
+    else:
+        print("'datasource' key not found in params_dict. Adding it.")
+        params_dict['datasource'] = new_datasource_value # Add if missing
+
+    chart_data = {
+            "slice_name":  slice_name_from_json, 
+            "datasource_id": new_dataset_id,
+            "datasource_type": "table",
+            "params": json.dumps(params_dict),
+            "description": "Updated data source!"
+            }
+    #print("#" * 50)
+    #print(chart_data)
+    #print("#" * 50)
+
+    request_handler.put_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False, json=chart_data)
     
     return data
 
+'''
+Reference - https://medium.com/@krprakruthiagri/apache-superset-dashboards-ui-vs-python-scripts-rest-api-fb9b99899ea6
+'''
 @app.route('/api/v1/update_charts', methods=['POST'])
 def update_charts():
     DATASET_ID = 141
     data = request.get_json() # Get JSON data from the request body
   
-
     request_handler = APIRequestHandler(SUPERSET_INSTANCE_URL, SUPERSET_USERNAME, SUPERSET_PASSWORD)
-    # {'slice_name': 'Employee Counter List sa', 'datasource_id': 141, 'description': 'Cloned', 'params': '{"datasource": "141__table"}'}       
 
     chart_data = []
     for item in data:
@@ -179,31 +208,37 @@ def update_charts():
 
             chart_response = request_handler.get_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False)
             chart_params_json = chart_response.json().get("result", {}).get("params")
-    
-            # Update the metadata with positions - it needs to be a dict
-            params_dict = json.loads(chart_params_json)
+            datasource_id_from_json = chart_response.json().get("result", {}).get("datasource_id")
+            print("*" * 50)
+            print(datasource_id_from_json)
+            print("*" * 50)
             
+            # parses the JSON string 'chart_params_json' into a Python dictionary - deserialization
+            params_dict = json.loads(chart_params_json)
+
+            # 3. Update the 'datasource' key
             """ "params": json.dumps({
                     "viz_type": viz_type_from_params,
                    "datasource": f"{DATASET_ID}__table"
                 }), """
-
-
+            """
+            if 'datasource' in params_dict:
+                new_datasource_value = f"{DATASET_ID}__table"
+                params_dict['datasource'] = new_datasource_value
+                print(f"Updated 'datasource' to: {new_datasource_value}")
+            else:
+                print("'datasource' key not found in params_dict. Adding it.")
+                params_dict['datasource'] = new_datasource_value # Add if missing
+            """
+            
             chart_data = {
                 "slice_name":  item['destinationChart'], 
-                "datasource_id": DATASET_ID,
-                "datasource_type": "table",
-                "params": json.dumps(params_dict),
-                "description": "Updated by script!"
+                "description": "Updated by cloner!"
             }
-            print("*" * 50)
-            print(chart_data)
-            print("*" * 50)
 
             request_handler.put_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False, json=chart_data)
 
     return data
-
 
 if __name__ == '__main__':
    app.run(debug=True, port=5000)
