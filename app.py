@@ -3,6 +3,7 @@ import json
 import random
 import string
 from flask import Flask, request, jsonify
+import requests
 
 import urllib.parse
 
@@ -20,83 +21,102 @@ CORS(app)
     
 @app.route('/api/v1/dashboards', methods=['GET'])
 def get_dashboards():
-    # Initialize the API request handler with Superset credentials
-    request_handler = APIRequestHandler(SUPERSET_INSTANCE_URL, SUPERSET_USERNAME, SUPERSET_PASSWORD)
+    try:
+        # Initialize the API request handler with Superset credentials
+        request_handler = APIRequestHandler(SUPERSET_INSTANCE_URL, SUPERSET_USERNAME, SUPERSET_PASSWORD)
 
-    dashboard_query_params = {
-        "page_size": 100
-    }
+        dashboard_query_params = {
+            "page_size": 100
+        }
 
-    # 1. Convert the dictionary to a JSON string
-    json_string = json.dumps(dashboard_query_params)
+        # 1. Convert the dictionary to a JSON string
+        json_string = json.dumps(dashboard_query_params)
 
-    # 2. URL-encode the JSON string
-    encoded_q_param = urllib.parse.quote(json_string)
+        # 2. URL-encode the JSON string
+        encoded_q_param = urllib.parse.quote(json_string)
 
-    final_endpoint_url = f"{DASHBOARD_ENDPOINT}?q={encoded_q_param}"
+        final_endpoint_url = f"{DASHBOARD_ENDPOINT}?q={encoded_q_param}"
 
-    # Execute the GET request to the dashboard endpoint
-    response = request_handler.get_request(final_endpoint_url, verify=False)
+        # Execute the GET request to the dashboard endpoint
+        response = request_handler.get_request(final_endpoint_url, verify=False)
 
-    # Check for HTTP errors (4xx or 500xx)
-    response.raise_for_status()
+        # Check for HTTP errors (4xx or 500xx)
+        response.raise_for_status()
 
-    # Safely parse JSON
-    data = response.json()
+        # Safely parse JSON
+        data = response.json()
 
-    # Check if result exists in the response
-    if 'result' not in data:
-        return jsonify({"error": "Unexpected response format from Superset"}), 502
+        # Check if result exists in the response
+        if 'result' not in data:
+            return jsonify({"error": "Unexpected response format from Superset"}), 502
+        
+        # Parse the JSON response and extract the 'result' key which contains dashboard data
+        dashboards = data['result']
+
+        # Return the extracted dashboard list as a JSON response
+        return jsonify(dashboards), 200
     
-    # Parse the JSON response and extract the 'result' key which contains dashboard data
-    dashboards = data['result']
-
-    # Return the extracted dashboard list as a JSON response
-    return jsonify(dashboards), 200
+    except requests.exceptions.HTTPError as http_err:
+        # Handles specific HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
+        return jsonify({"error": f"HTTP error occurred: {http_err}"}), response.status_code
+    
+    except json.JSONDecodeError:
+        # Handles cases where the response is not valid JSON
+        return jsonify({"error": "Failed to decode JSON from Superset"}), 502
+    
+    except Exception as e:
+        # Catches any other unexpected issues (connection, logic, etc.)
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 @app.route('/api/v1/datasets', methods=['GET'])
 def get_datasets():
-    # Initialize the API request handler with Superset credentials
-    request_handler = APIRequestHandler(SUPERSET_INSTANCE_URL, SUPERSET_USERNAME, SUPERSET_PASSWORD)
+    try:
+        # Initialize the API request handler with Superset credentials
+        request_handler = APIRequestHandler(SUPERSET_INSTANCE_URL, SUPERSET_USERNAME, SUPERSET_PASSWORD)
 
-    dataset_query_params = {
-        "page_size": 100
-    }
+        dataset_query_params = {
+            "page_size": 100
+        }
 
-    # 1. Convert the dictionary to a JSON string
-    json_string = json.dumps(dataset_query_params)
+        # 1. Convert the dictionary to a JSON string
+        json_string = json.dumps(dataset_query_params)
 
-    # 2. URL-encode the JSON string
-    encoded_q_param = urllib.parse.quote(json_string)
+        # 2. URL-encode the JSON string
+        encoded_q_param = urllib.parse.quote(json_string)
 
-    final_endpoint_url = f"{DATASET_ENDPOINT}?q={encoded_q_param}"
-    print(final_endpoint_url)
+        final_endpoint_url = f"{DATASET_ENDPOINT}?q={encoded_q_param}"
+        print(final_endpoint_url)
 
-    # Execute the GET request to the dataset endpoint
-    response = request_handler.get_request(final_endpoint_url, verify=False)
+        # Execute the GET request to the dataset endpoint
+        response = request_handler.get_request(final_endpoint_url, verify=False)
 
-    # Check for HTTP errors (4xx or 500xx)
-    response.raise_for_status()
+        # Check for HTTP errors (4xx or 500xx)
+        response.raise_for_status()
 
-    # Safely parse JSON
-    data = response.json()
+        # Safely parse JSON
+        data = response.json()
 
-    # Check if result exists in the response
-    if 'result' not in data:
-        return jsonify({"error": "Unexpected response format from Superset"}), 502
+        # Check if result exists in the response
+        if 'result' not in data:
+            return jsonify({"error": "Unexpected response format from Superset"}), 502
+        
+        # Parse the JSON response and extract the 'result' key which contains dataset data
+        datasets = data['result']
+
+        # Return the extracted dataset list as a JSON response
+        return jsonify(datasets), 200
     
-    # Parse the JSON response and extract the 'result' key which contains dataset data
-    datasets = data['result']
-
-    # Return the extracted dataset list as a JSON response
-    return jsonify(datasets), 200
-
-    # Parse the JSON response and extract the 'result' key which contains dataset data
-    #datasets = json.loads(dataset_get_response.text)['result'] 
-
-    # Return the extracted dataset list as a JSON response   
-    #return jsonify(datasets)
-
+    except requests.exceptions.HTTPError as http_err:
+        # Handles specific HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
+        return jsonify({"error": f"HTTP error occurred: {http_err}"}), response.status_code
+    
+    except json.JSONDecodeError:
+        # Handles cases where the response is not valid JSON
+        return jsonify({"error": "Failed to decode JSON from Superset"}), 502
+    
+    except Exception as e:
+        # Catches any other unexpected issues (connection, logic, etc.)
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 @app.route('/api/v1/load_slice_details', methods=['POST'])
 def load_slice_details():
