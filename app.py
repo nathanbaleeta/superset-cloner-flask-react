@@ -48,19 +48,11 @@ def get_dashboards():
     if 'result' not in data:
         return jsonify({"error": "Unexpected response format from Superset"}), 502
     
-   
     # Parse the JSON response and extract the 'result' key which contains dashboard data
     dashboards = data['result']
 
     # Return the extracted dashboard list as a JSON response
     return jsonify(dashboards), 200
-    
-
-    # Parse the JSON response and extract the 'result' key which contains dashboard data
-    #dashboards = json.loads(dashboard_get_response.text)['result']
-
-    # Return the extracted dashboard list as a JSON response
-    #return jsonify(dashboards)
 
 @app.route('/api/v1/datasets', methods=['GET'])
 def get_datasets():
@@ -81,13 +73,29 @@ def get_datasets():
     print(final_endpoint_url)
 
     # Execute the GET request to the dataset endpoint
-    dataset_get_response = request_handler.get_request(final_endpoint_url, verify=False)
+    response = request_handler.get_request(final_endpoint_url, verify=False)
+
+    # Check for HTTP errors (4xx or 500xx)
+    response.raise_for_status()
+
+    # Safely parse JSON
+    data = response.json()
+
+    # Check if result exists in the response
+    if 'result' not in data:
+        return jsonify({"error": "Unexpected response format from Superset"}), 502
+    
+    # Parse the JSON response and extract the 'result' key which contains dataset data
+    datasets = data['result']
+
+    # Return the extracted dataset list as a JSON response
+    return jsonify(datasets), 200
 
     # Parse the JSON response and extract the 'result' key which contains dataset data
-    datasets = json.loads(dataset_get_response.text)['result'] 
+    #datasets = json.loads(dataset_get_response.text)['result'] 
 
     # Return the extracted dataset list as a JSON response   
-    return jsonify(datasets)
+    #return jsonify(datasets)
 
 
 @app.route('/api/v1/load_slice_details', methods=['POST'])
