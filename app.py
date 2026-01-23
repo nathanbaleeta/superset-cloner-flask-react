@@ -155,8 +155,12 @@ def extract_table_id(text):
 @app.route('/api/v1/copy_dashboard', methods=['POST'])
 def copy_dashboard():
     data = request.get_json() # Get JSON data from the request body
-    dashboard_id = data.get('dashboard_id')
-    new_dashboard_title = data.get('new_dashboard_title')
+    #dashboard_id = data.get('dashboard_id')
+    #new_dashboard_title = data.get('new_dashboard_title')
+
+    # Generator expression and tuple unpacking
+    keys = ('dashboard_id', 'new_dashboard_title')
+    dashboard_id, new_dashboard_title = (data.get(k) for k in keys)
 
     #if dashboard_id and new_dashboard_title:
     #    print(f"Received data: id: {id}, name: {new_dashboard_title}")
@@ -197,14 +201,10 @@ def copy_dashboard():
 @app.route('/api/v1/update_chart_datasource', methods=['POST'])
 def update_chart_datasource():
     data = request.get_json() # Get JSON data from the request body
-    #print("#" * 50)
-    #print(data)
-    #print("#" * 50)
 
-    new_dashboard_id = data.get('newDashboardId')
-    old_dataset_id = data.get('oldDatasetId')
-    new_dataset_id = data.get('newDatasetId')
-    slice_id = data.get('sliceId')
+    # Generator expression and tuple unpacking
+    keys = (new_dashboard_id, old_dataset_id, new_dataset_id, slice_id)
+    new_dashboard_id, old_dataset_id, new_dataset_id, slice_id = (data.get(k) for k in keys)
 
     request_handler = APIRequestHandler(SUPERSET_INSTANCE_URL, SUPERSET_USERNAME, SUPERSET_PASSWORD)
     chart_response = request_handler.get_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False)
@@ -229,9 +229,6 @@ def update_chart_datasource():
             "params": json.dumps(params_dict),
             "description": "Updated data source!"
             }
-    #print("#" * 50)
-    #print(chart_data)
-    #print("#" * 50)
 
     request_handler.put_request(f"{CHART_ENDPOINT}/{slice_id}", verify=False, json=chart_data)
     
